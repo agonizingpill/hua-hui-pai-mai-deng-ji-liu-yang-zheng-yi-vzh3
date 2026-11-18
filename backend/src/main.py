@@ -35,7 +35,7 @@ def login(d:Login,s=Depends(session)):
 def me(u=Depends(current)):return {'email':u.email,'role':u.role}
 @app.get('/archive')
 def archive(s=Depends(session),u=Depends(current)):
-    return {m.__tablename__:[pack(x)for x in s.scalars(select(m).order_by(m.id))]for m in (Clock,Consignment,VaseSample,AuctionSession,AuctionLot,Bid,Deal,Dispute,Settlement)}
+    return {m.__tablename__:[pack(x)for x in s.scalars(select(m).order_by(m.id))]for m in (Clock,Consignment,VaseSample,AuctionSession,AuctionLot,Bid,Deal,Dispute,DisputeEvidence,Settlement)}
 @app.get('/audits')
 def audits(s=Depends(session),u=Depends(current)):return [pack(x)for x in s.scalars(select(Audit).order_by(Audit.id.desc()).limit(50))]
 @app.post('/consignments')
@@ -69,7 +69,9 @@ def grade(id:int,d:GradeInput,s=Depends(session),u=Depends(supervisor)):
 def observation(id:int,d:ObservationInput,s=Depends(session),u=Depends(writer)):
     x=lock(s,VaseSample,id)
     if x.observed_days is not None:raise HTTPException(409,'瓶插终点观察已封存，不可覆盖争议证据')
-    x.observed_days=d.observed_days;audit(s,u,'封存实际瓶插观察');s.commit();return pack(x)
+    x.observed_days=d.observed_days;audit(s,u,'封存实际瓶插观察')
+    for c in s.scalars(select(Dispute).where(Dispute.proxy_sample_id==id,Dispute.state=='observing')):dispute.advance(s,c)
+    s.commit();return pack(x)
 @app.post('/sessions')
 def session_new(d:SessionInput,s=Depends(session),u=Depends(supervisor)):
     x=auction.session_create(s,d,u);s.commit();return x
@@ -93,6 +95,9 @@ def cancel(id:int,s=Depends(session),u=Depends(supervisor)):
 @app.post('/disputes')
 def claim(d:DisputeInput,s=Depends(session),u=Depends(writer)):
     x=dispute.open_dispute(s,d,u);s.commit();return x
+@app.post('/disputes/{id}/resume')
+def resume(id:int,s=Depends(session),u=Depends(writer)):
+    x=dispute.resume(s,id,u);s.commit();return x
 @app.post('/disputes/{id}/decide')
 def decide(id:int,d:DecisionInput,s=Depends(session),u=Depends(supervisor)):
     x=dispute.decide(s,id,d,u);s.commit();return x

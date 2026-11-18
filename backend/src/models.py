@@ -32,7 +32,10 @@ class Deal(Base):
     id=Column(Integer,primary_key=True);lot_id=Column(Integer,ForeignKey('auction_lots.id'),unique=True,nullable=False);bid_id=Column(Integer,ForeignKey('bids.id'),nullable=False);buyer=Column(String(80),nullable=False);crates=Column(Integer,nullable=False);unit_cents=Column(Integer,nullable=False);original_grade=Column(String(2),nullable=False);effective_grade=Column(String(2),nullable=False);revision=Column(Integer,default=1);at=Column(String(20),nullable=False)
 class Dispute(Base):
     __tablename__='disputes'
-    id=Column(Integer,primary_key=True);deal_id=Column(Integer,ForeignKey('deals.id'),nullable=False);reason=Column(String(250),nullable=False);state=Column(String(20),default='opened');decision_note=Column(String(250));revised_grade=Column(String(2));sample_snapshot=Column(JSON)
+    id=Column(Integer,primary_key=True);deal_id=Column(Integer,ForeignKey('deals.id'),nullable=False);reason=Column(String(250),nullable=False);state=Column(String(20),default='opened');mode=Column(String(10),default='direct');proxy_sample_id=Column(Integer,ForeignKey('vase_samples.id'));corrected_days=Column(Float);decision_note=Column(String(250));revised_grade=Column(String(2));sample_snapshot=Column(JSON)
+class DisputeEvidence(Base):
+    __tablename__='dispute_evidence'
+    id=Column(Integer,primary_key=True);dispute_id=Column(Integer,ForeignKey('disputes.id'),nullable=False);sample_id=Column(Integer,ForeignKey('vase_samples.id'),nullable=False);estimate_days=Column(Float);gap_days=Column(Float);observed_days=Column(Float);selected=Column(Boolean,default=False);reason=Column(String(250))
 class Settlement(Base):
     __tablename__='settlements'
     id=Column(Integer,primary_key=True);deal_id=Column(Integer,ForeignKey('deals.id'),nullable=False);revision=Column(Integer,nullable=False);kind=Column(String(20),nullable=False);gross_cents=Column(Integer,nullable=False);commission_cents=Column(Integer,nullable=False);target_cents=Column(Integer,nullable=False);delta_cents=Column(Integer,nullable=False);state=Column(String(20),default='draft');snapshot=Column(JSON);receipt=Column(String(80))
